@@ -23,6 +23,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserServiceImpl service;
+    private final UserServiceImpl userServiceImpl;
 
     @Operation(summary = "Login user", description = "Login a user by their username and password")
     @PostMapping("/login")
@@ -58,6 +59,13 @@ public class AuthController {
     @PostMapping("/register")
     public UserResponseDto registrationUser(@Valid @RequestBody UserRequestDto user) {
         return service.createUser(user);
+    }
+
+    @Operation(summary = "Confirm registration", description = "Confirmation new user registration by checking a code")
+    @GetMapping("/confirm/{confirm-code}")
+    public String getConfirmation(@PathVariable("confirm-code") String confirmCode){
+        boolean success = userServiceImpl.confirm(confirmCode);
+        return String.valueOf(success);
     }
 
 }

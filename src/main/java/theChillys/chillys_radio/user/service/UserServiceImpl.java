@@ -2,6 +2,7 @@ package theChillys.chillys_radio.user.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -28,6 +29,7 @@ import java.util.*;
 
 @RequiredArgsConstructor
 @Service
+@Slf4j
 public class UserServiceImpl implements IUserService, UserDetailsService {
 
     private final IUserRepository repository;
@@ -54,6 +56,7 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
     @Transactional
     @Override
     public UserResponseDto createUser(UserRequestDto dto) {
+        log.info("Current thread for Registration: " + Thread.currentThread().getName());
 
         if (dto.getName() == null || dto.getName().isEmpty()) {
             throw new IllegalArgumentException("User name is required");
@@ -88,13 +91,24 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
         ConfirmationCode code = new ConfirmationCode();
         code.setCode(codeValue);
         code.setUser(newUser);
-        code.setExpiredDateTime(LocalDateTime.now().plusMinutes(1));
+        code.setExpiredDateTime(LocalDateTime.now().plusWeeks(1));
 
         confirmationCodeRepository.save((code));
 
-        mailSender.send(newUser.getEmail(), "Registration on Chillys Radio", "Hi there! `\n` Your registration code is: `\n` " + codeValue);
+        mailSender.send(newUser.getEmail(),
+                "Registration on Chillys Radio",
+                "Hi " + newUser.getName() + "!"+ "\nTo activate your newly created account please follow the link: " + "\n" + "<a href='http://localhost:8080/api/auth/confirm/" + codeValue + "'>Confirm Registration</a>"); //@Async
 
         return mapper.map(savedUser, UserResponseDto.class);
+    }
+
+    @Transactional
+    public boolean confirm (String confirmCode){
+        User user = repository.findFirstByCodes_Code(confirmCode).orElseThrow(() -> new UserNotFoundException("User with confirmation code " + confirmCode + " not found") );
+
+        user.setState(User.State.CONFIRMED);
+
+        return true;
     }
 
 

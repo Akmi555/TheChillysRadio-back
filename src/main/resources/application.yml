@@ -23,7 +23,7 @@ spring:
           auth: true
           starttls:
             enable: true
-      debug: true
+        debug: true
 
 server:
   servlet:
@@ -39,3 +39,9 @@ springdoc:
     display-request-duration: true
     try-it-out-enabled: true
   default-produces-media-type: application/json
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+        mail: DEBUG

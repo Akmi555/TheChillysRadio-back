@@ -56,6 +56,10 @@ public class User implements UserDetails { //имплементирует инт
     )
     private Set<Station> favorites;
 
+    @OneToMany(mappedBy = "user")
+    @Column(name = "codes")
+    private Set<ConfirmationCode> codes;
+
     @Column(nullable = false)
     @Enumerated(value = EnumType.STRING)
     private State state;
