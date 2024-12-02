@@ -47,6 +47,7 @@ public class SecurityConfiguration {
                                 .requestMatchers(HttpMethod.POST, "/users").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh").permitAll()
                                 .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/auth/confirm/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/ivan-stations").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/ivan-stations/{stationuuid}").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/click/{stationuuid}").permitAll()
