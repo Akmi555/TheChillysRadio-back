@@ -21,6 +21,10 @@ import java.util.Set;
 @Table(name = "t_user")
 public class User implements UserDetails { //имплементирует интерфейс говорящий Spring Security что это именно пользователь
 
+    public enum State {
+        NOT_CONFIRMED, CONFIRMED, DELETED, BANNED
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -51,6 +55,10 @@ public class User implements UserDetails { //имплементирует инт
             inverseJoinColumns = @JoinColumn(name = "station_id")
     )
     private Set<Station> favorites;
+
+    @Column(nullable = false)
+    @Enumerated(value = EnumType.STRING)
+    private State state;
 
     @Override
     public final boolean equals(Object o) {
@@ -86,7 +94,7 @@ public class User implements UserDetails { //имплементирует инт
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return !getState().equals(State.BANNED);
     }
 
     @Override
@@ -96,6 +104,6 @@ public class User implements UserDetails { //имплементирует инт
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return getState().equals(State.CONFIRMED);
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import theChillys.chillys_radio.exception.StationNotFoundException;
 import theChillys.chillys_radio.exception.UserNotFoundException;
+import theChillys.chillys_radio.mail.ChillysRadioMailSender;
 import theChillys.chillys_radio.role.IRoleService;
 import theChillys.chillys_radio.role.Role;
 import theChillys.chillys_radio.station.dto.StationResponseDto;
@@ -17,13 +18,13 @@ import theChillys.chillys_radio.station.entity.Station;
 import theChillys.chillys_radio.station.repository.IStationRepository;
 import theChillys.chillys_radio.user.dto.UserRequestDto;
 import theChillys.chillys_radio.user.dto.UserResponseDto;
+import theChillys.chillys_radio.user.entity.ConfirmationCode;
 import theChillys.chillys_radio.user.entity.User;
+import theChillys.chillys_radio.user.repository.IConfirmationCodesRepository;
 import theChillys.chillys_radio.user.repository.IUserRepository;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -35,6 +36,8 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
     private final BCryptPasswordEncoder encoder;
     private final IStationRepository stationRepository;
 //  private final UserDetailsServiceAutoConfiguration userDetailsServiceAutoConfiguration;
+    private final IConfirmationCodesRepository confirmationCodeRepository;
+    private final ChillysRadioMailSender mailSender;
 
     public User findUserById(Long userId) {
         return repository.findById(userId)
@@ -48,6 +51,7 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
         return customers.stream().map(c -> mapper.map(c, UserResponseDto.class)).toList();
     }
 
+    @Transactional
     @Override
     public UserResponseDto createUser(UserRequestDto dto) {
 
@@ -75,8 +79,20 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
         newUser.setPassword(encodedPass);
         newUser.setRoles(Collections.singleton(role));
         newUser.setFavorites(Collections.emptySet());
+        newUser.setState(User.State.NOT_CONFIRMED);
 
         User savedUser = repository.save(newUser);
+
+        String codeValue = UUID.randomUUID().toString();
+
+        ConfirmationCode code = new ConfirmationCode();
+        code.setCode(codeValue);
+        code.setUser(newUser);
+        code.setExpiredDateTime(LocalDateTime.now().plusMinutes(1));
+
+        confirmationCodeRepository.save((code));
+
+        mailSender.send(newUser.getEmail(), "Registration on Chillys Radio", "Hi there! `\n` Your registration code is: `\n` " + codeValue);
 
         return mapper.map(savedUser, UserResponseDto.class);
     }

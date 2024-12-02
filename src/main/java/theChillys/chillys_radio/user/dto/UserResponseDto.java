@@ -7,6 +7,7 @@ import lombok.Setter;
 import theChillys.chillys_radio.role.Role;
 import theChillys.chillys_radio.station.dto.StationResponseDto;
 import theChillys.chillys_radio.station.entity.Station;
+import theChillys.chillys_radio.user.entity.User;
 
 import java.util.List;
 import java.util.Set;
@@ -22,6 +23,7 @@ public class UserResponseDto {
     private String email;
     private List<StationResponseDto> favorites;
     private Set<Role> roles;
+    private User.State state;
 
     @Override
     public String toString() {
@@ -31,6 +33,7 @@ public class UserResponseDto {
                 ", email='" + email + '\'' +
                 ", favorites=" + favorites +
                 ", roles=" + roles +
+                ", state=" + state +
                 '}';
     }
 }
