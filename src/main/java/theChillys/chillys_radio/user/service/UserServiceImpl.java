@@ -4,11 +4,15 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.cglib.core.Local;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import theChillys.chillys_radio.exception.StationNotFoundException;
 import theChillys.chillys_radio.exception.UserNotFoundException;
 import theChillys.chillys_radio.mail.ChillysRadioMailSender;
@@ -104,7 +108,14 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
 
     @Transactional
     public boolean confirm (String confirmCode){
-        User user = repository.findFirstByCodes_Code(confirmCode).orElseThrow(() -> new UserNotFoundException("User with confirmation code " + confirmCode + " not found") );
+
+        ConfirmationCode code = confirmationCodeRepository
+                .findByCodeAndExpiredDateTimeAfter(confirmCode, LocalDateTime.now())
+                .orElseThrow(RuntimeException::new);
+
+        User user = repository
+                .findFirstByCodesContains(code)
+                .orElseThrow(() -> new UserNotFoundException("User with confirmation code " + confirmCode + " not found") );
 
         user.setState(User.State.CONFIRMED);
 
