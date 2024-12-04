@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import theChillys.chillys_radio.user.dto.UserRequestDto;
 import theChillys.chillys_radio.user.dto.UserResponseDto;
+import theChillys.chillys_radio.user.entity.User;
 import theChillys.chillys_radio.user.service.UserServiceImpl;
 
 
@@ -23,7 +24,6 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserServiceImpl service;
-    private final UserServiceImpl userServiceImpl;
 
     @Operation(summary = "Login user", description = "Login a user by their username and password")
     @PostMapping("/login")
@@ -63,9 +63,8 @@ public class AuthController {
 
     @Operation(summary = "Confirm registration", description = "Confirmation new user registration by checking a code")
     @GetMapping("/confirm/{confirm-code}")
-    public String getConfirmation(@PathVariable("confirm-code") String confirmCode){
-        boolean success = userServiceImpl.confirm(confirmCode);
-        return String.valueOf(success);
+    public UserResponseDto getConfirmation(@PathVariable("confirm-code") String confirmCode){
+        return service.confirm(confirmCode);
     }
 
 }

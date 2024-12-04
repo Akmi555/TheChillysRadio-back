@@ -1,5 +1,8 @@
 package theChillys.chillys_radio.user.service;
 
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,11 +14,13 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import theChillys.chillys_radio.exception.StationNotFoundException;
 import theChillys.chillys_radio.exception.UserNotFoundException;
 import theChillys.chillys_radio.mail.ChillysRadioMailSender;
+import theChillys.chillys_radio.mail.MailTemplatesUtil;
 import theChillys.chillys_radio.role.IRoleService;
 import theChillys.chillys_radio.role.Role;
 import theChillys.chillys_radio.station.dto.StationResponseDto;
@@ -28,6 +33,7 @@ import theChillys.chillys_radio.user.entity.User;
 import theChillys.chillys_radio.user.repository.IConfirmationCodesRepository;
 import theChillys.chillys_radio.user.repository.IUserRepository;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -43,7 +49,9 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
     private final IStationRepository stationRepository;
 //  private final UserDetailsServiceAutoConfiguration userDetailsServiceAutoConfiguration;
     private final IConfirmationCodesRepository confirmationCodeRepository;
-    private final ChillysRadioMailSender mailSender;
+    private final MailTemplatesUtil mailTemplatesUtil;
+
+
 
     public User findUserById(Long userId) {
         return repository.findById(userId)
@@ -60,8 +68,65 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
     @Transactional
     @Override
     public UserResponseDto createUser(UserRequestDto dto) {
-        log.info("Current thread for Registration: " + Thread.currentThread().getName());
 
+        checkUserData(dto);
+
+        checkIfUserExistsByName(dto);
+
+        Role role = roleService.getRoleByTitle("ROLE_USER");
+
+        String encodedPass = encoder.encode(dto.getPassword());
+
+        User newUser = createNewUserFromDto(dto, encodedPass, role);
+
+        User savedUser = repository.save(newUser);
+
+        String codeValue = UUID.randomUUID().toString();
+
+        saveConfirmCode(codeValue, newUser);
+
+        String link = createConfirmationLink(codeValue);
+
+        String html = mailTemplatesUtil.createEmailTemplate(newUser, link);
+
+        mailTemplatesUtil.sendMail(newUser, html);
+
+        return mapper.map(savedUser, UserResponseDto.class);
+    }
+
+    private static User createNewUserFromDto(UserRequestDto dto, String encodedPass, Role role) {
+        User newUser = new User();
+        newUser.setName(dto.getName());
+        newUser.setEmail(dto.getEmail());
+        newUser.setPassword(encodedPass);
+        newUser.setRoles(Collections.singleton(role));
+        newUser.setFavorites(Collections.emptySet());
+        newUser.setState(User.State.NOT_CONFIRMED);
+        return newUser;
+    }
+
+
+    private static String createConfirmationLink(String codeValue) {
+        String link = "<a href='https://urchin-app-jq2i7.ondigitalocean.app/#/confirm?id=" + codeValue + "'>Confirm Registration</a>";
+        return link;
+    }
+
+    private void saveConfirmCode(String codeValue, User newUser) {
+        ConfirmationCode code = new ConfirmationCode();
+        code.setCode(codeValue);
+        code.setUser(newUser);
+        code.setExpiredDateTime(LocalDateTime.now().plusWeeks(1));
+
+        confirmationCodeRepository.save((code));
+    }
+
+    private void checkIfUserExistsByName(UserRequestDto dto) {
+        repository.findUserByName(dto.getName()).ifPresent(u -> {
+            throw new RuntimeException("User " + dto.getName() + " already exists");
+        });
+    }
+
+    private static void checkUserData(UserRequestDto dto) {
         if (dto.getName() == null || dto.getName().isEmpty()) {
             throw new IllegalArgumentException("User name is required");
         }
@@ -71,43 +136,10 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
         if (dto.getPassword() == null || dto.getPassword().isEmpty()) {
             throw new IllegalArgumentException("Password is required");
         }
-
-        repository.findUserByName(dto.getName()).ifPresent(u -> {
-            throw new RuntimeException("User " + dto.getName() + " already exists");
-        });
-
-        Role role = roleService.getRoleByTitle("ROLE_USER");
-
-        String encodedPass = encoder.encode(dto.getPassword());
-
-        User newUser = new User();
-        newUser.setName(dto.getName());
-        newUser.setEmail(dto.getEmail());
-        newUser.setPassword(encodedPass);
-        newUser.setRoles(Collections.singleton(role));
-        newUser.setFavorites(Collections.emptySet());
-        newUser.setState(User.State.NOT_CONFIRMED);
-
-        User savedUser = repository.save(newUser);
-
-        String codeValue = UUID.randomUUID().toString();
-
-        ConfirmationCode code = new ConfirmationCode();
-        code.setCode(codeValue);
-        code.setUser(newUser);
-        code.setExpiredDateTime(LocalDateTime.now().plusWeeks(1));
-
-        confirmationCodeRepository.save((code));
-
-        mailSender.send(newUser.getEmail(),
-                "Registration on Chillys Radio",
-                "Hi " + newUser.getName() + "!"+ "\nTo activate your newly created account please follow the link: " + "\n" + "<a href='http://localhost:8080/api/auth/confirm/" + codeValue + "'>Confirm Registration</a>"); //@Async
-
-        return mapper.map(savedUser, UserResponseDto.class);
     }
 
     @Transactional
-    public boolean confirm (String confirmCode){
+    public UserResponseDto confirm (String confirmCode){
 
         ConfirmationCode code = confirmationCodeRepository
                 .findByCodeAndExpiredDateTimeAfter(confirmCode, LocalDateTime.now())
@@ -119,7 +151,7 @@ public class UserServiceImpl implements IUserService, UserDetailsService {
 
         user.setState(User.State.CONFIRMED);
 
-        return true;
+        return mapper.map(user, UserResponseDto.class);
     }
 
 
