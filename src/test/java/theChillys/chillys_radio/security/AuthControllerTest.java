@@ -23,7 +23,6 @@ class AuthControllerTest {
     private UserResponseDto userResponseDto;
 
     private final AuthService authService = mock(AuthService.class);
-
     private final UserServiceImpl userService = mock(UserServiceImpl.class);
 
     @BeforeEach

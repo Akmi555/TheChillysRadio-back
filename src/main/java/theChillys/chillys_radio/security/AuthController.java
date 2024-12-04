@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import theChillys.chillys_radio.user.dto.UserRequestDto;
 import theChillys.chillys_radio.user.dto.UserResponseDto;
+import theChillys.chillys_radio.user.entity.User;
 import theChillys.chillys_radio.user.service.UserServiceImpl;
 
 
@@ -58,6 +59,12 @@ public class AuthController {
     @PostMapping("/register")
     public UserResponseDto registrationUser(@Valid @RequestBody UserRequestDto user) {
         return service.createUser(user);
+    }
+
+    @Operation(summary = "Confirm registration", description = "Confirmation new user registration by checking a code")
+    @GetMapping("/confirm/{confirm-code}")
+    public UserResponseDto getConfirmation(@PathVariable("confirm-code") String confirmCode){
+        return service.confirm(confirmCode);
     }
 
 }

@@ -33,4 +33,8 @@ public interface IUserService {
 
     UserResponseDto getUserResponseDtoByName(String name);
 
+    UserResponseDto confirm (String confirmCode);
+
+
+
 }
