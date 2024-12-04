@@ -12,6 +12,18 @@ spring:
         auto_quote_keyword: true
   key_access: oxCIJkAR/pepyVVpChYM3UhUfsjY8jfkSyqp7Do9xFc=
   key_refresh: T8QmKiJpXwG0OCXyqJRQ0i9IN5/7G37HPmQqKyOoEd4=
+  mail:
+    password: rmvv nrke oyjs zvam
+    username: chillysradio@gmail.com
+    host: smtp.gmail.com
+    port: 587
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+        debug: true
 
 server:
   servlet:
@@ -27,3 +39,9 @@ springdoc:
     display-request-duration: true
     try-it-out-enabled: true
   default-produces-media-type: application/json
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+        mail: DEBUG
